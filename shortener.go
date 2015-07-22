@@ -24,7 +24,7 @@ import (
 const Version = "0.1.0"
 
 func init() {
-	http.HandleFunc("/shortner/v1", shortner)
+	http.HandleFunc("/shortener/v1", shortner)
 	http.HandleFunc("/version", version)
 }
 
@@ -41,7 +41,7 @@ func shortner(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Unexpected payload: %v", err), http.StatusInternalServerError)
 	}
-	err := json.Unmarshal(r.Body, &req)
+	err = json.Unmarshal(data, &req)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("JSON decode error: %v", err), http.StatusInternalServerError)
 	}
