@@ -24,12 +24,20 @@ import (
 const Version = "0.1.0"
 
 func init() {
-	http.HandleFunc("/shortener/v1", shortner)
-	http.HandleFunc("/version", version)
+	router := &RegexpHandler{}
+	router.HandleFunc(`/`, top)
+	router.HandleFunc(`/[0-9A-Za-z]{6}`, redirect)
+	router.HandleFunc(`/version`, version)
+	router.HandleFunc(`/shortener/v1`, shortner)
+	http.Handle("/", router)
 }
 
 func version(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, Version)
+}
+
+func top(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "hello")
 }
 
 func shortner(w http.ResponseWriter, r *http.Request) {
@@ -46,4 +54,8 @@ func shortner(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("JSON decode error: %v", err), http.StatusInternalServerError)
 	}
 	fmt.Fprintf(w, req.URL)
+}
+
+func redirect(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "https://www.google.com", http.StatusFound)
 }

@@ -14,6 +14,45 @@
 
 package shortener
 
+import (
+	"net/http"
+	"regexp"
+
+	"appengine"
+)
+
 type URLRequest struct {
 	URL string `json:"url"`
+}
+
+type route struct {
+	pattern *regexp.Regexp
+	handler http.Handler
+}
+
+type RegexpHandler struct {
+	routes []*route
+}
+
+func (rh *RegexpHandler) Handler(pattern string, handler http.Handler) {
+	p := regexp.MustCompile(`^` + pattern + `$`)
+	rh.routes = append(rh.routes, &route{p, handler})
+}
+
+func (rh *RegexpHandler) HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) {
+	p := regexp.MustCompile(`^` + pattern + `$`)
+	rh.routes = append(rh.routes, &route{p, http.HandlerFunc(handler)})
+}
+
+func (rh *RegexpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
+	c.Infof("[ServeHTTP] %v, N routers: %v", r.URL.Path, len(rh.routes))
+	for _, route := range rh.routes {
+		c.Infof("[ServeHTTP] matched %v", route.pattern)
+		if route.pattern.MatchString(r.URL.Path) {
+			route.handler.ServeHTTP(w, r)
+			return
+		}
+	}
+	http.NotFound(w, r)
 }
