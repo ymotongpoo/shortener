@@ -21,6 +21,7 @@ import (
 	"math/rand"
 	"net/http"
 	"path"
+	"regexp"
 	"time"
 
 	"appengine"
@@ -34,6 +35,8 @@ const (
 )
 
 var chars []byte // used for unique id generation.
+
+var URLpattern = regexp.MustCompile(`(https?|ftp)://([\w-]+\.)+[\w-]+(/[\w- ./?%&=]*)?`)
 
 // initChars initialize chars as sequence of 0-9A-Za-z
 func initChars() {
@@ -86,6 +89,10 @@ func shortener(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("JSON decode error: %v", err), http.StatusInternalServerError)
 	}
 
+	if !URLpattern.MatchString(req.URL) {
+		http.Error(w, fmt.Sprintf("parameter must be valid web URI"), http.StatusBadRequest)
+	}
+
 	c := appengine.NewContext(r)
 	id := uniqueid()
 	e := &URLEntity{
@@ -119,7 +126,7 @@ func redirect(w http.ResponseWriter, r *http.Request) {
 	}
 	original := es[0].URL
 	es[0].Count += 1
-	key, err := datastore.Put(c, key[0], es[0])
+	_, err = datastore.Put(c, keys[0], es[0])
 	if err != nil {
 		http.Error(w, fmt.Sprintf("datastore error: %v", err), http.StatusInternalServerError)
 	}
