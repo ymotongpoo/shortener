@@ -24,6 +24,12 @@ type URLRequest struct {
 	URL string `json:"url"`
 }
 
+type URLEntity struct {
+	ID    string `json:"id"`
+	URL   string `json:"url"`
+	Count int    `json:"count"`
+}
+
 // route holds URL path regexp pattern and corresponding handler.
 type route struct {
 	pattern *regexp.Regexp

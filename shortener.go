@@ -20,53 +20,57 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"time"
+
+	"appengine"
+	"appengine/datastore"
 )
 
-const Version = "0.1.0"
-
-var (
-	seed    = int64(25) // seed for randomness
-	samples = []byte{}
+const (
+	Version            = "0.1.0"
+	starttime          = int64(1437625938157481) // around 2015 Jul 23 13:34
+	timestampLeftShift = 22
 )
 
-func initSample() {
-	original := make([]byte, 64) // [0-9A-Za-z_\-] contains 64 chars.
-	for i := 0; i < 10; i++ {    // 0-9
-		original[i] = byte(48 + i)
+var chars []byte // used for unique id generation.
+
+// initChars initialize chars as sequence of 0-9A-Za-z
+func initChars() {
+	chars = make([]byte, 62)
+	for i := 0; i < 10; i++ { // 0-9
+		chars[i] = byte(48 + i)
 	}
 	for i := 0; i < 26; i++ { // A-Z
-		original[10+i] = byte(65 + i)
+		chars[i+10] = byte(65 + i)
 	}
 	for i := 0; i < 26; i++ { // a-z
-		original[36+i] = byte(97 + i)
-	}
-	original[62] = '_'
-	original[63] = '-'
-	rand.Seed(seed)
-	for i, n := range rand.Perm(len(original)) {
-		samples[i] = original[n]
+		chars[i+36] = byte(97 + i)
 	}
 }
 
+// init setup chars and URL routers.
 func init() {
-	initSample()
+	initChars()
 	router := &RegexpHandler{}
 	router.HandleFunc(`/`, top)
-	router.HandleFunc(`/[0-9A-Za-z_\-]{6}`, redirect)
+	router.HandleFunc(`/[0-9A-Za-z_\-]{10,}`, redirect)
 	router.HandleFunc(`/version`, version)
-	router.HandleFunc(`/shortener/v1`, shortner)
+	router.HandleFunc(`/shortener/v1`, shortener)
 	http.Handle("/", router)
 }
 
+// version returns application version.
 func version(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, Version)
 }
 
+// top returns UI front page.
 func top(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "hello")
 }
 
-func shortner(w http.ResponseWriter, r *http.Request) {
+// shortener
+func shortener(w http.ResponseWriter, r *http.Request) {
 	req := URLRequest{}
 	if r.Method != "POST" {
 		http.Error(w, fmt.Sprintf("Methods but for POST are not allowed"), http.StatusMethodNotAllowed)
@@ -79,9 +83,46 @@ func shortner(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, fmt.Sprintf("JSON decode error: %v", err), http.StatusInternalServerError)
 	}
-	fmt.Fprintf(w, req.URL)
+
+	c := appengine.NewContext(r)
+	id := uniqueid()
+	e := &URLEntity{
+		ID:  id,
+		URL: req.URL,
+	}
+	key := datastore.NewIncompleteKey(c, "URL", nil)
+	_, err = datastore.Put(c, key, e)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("datastore put error: %v", err), http.StatusInternalServerError)
+	}
+	entry, err := json.Marshal(e)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("JSON encode error: %v", err), http.StatusInternalServerError)
+	}
+	fmt.Fprintf(w, string(entry))
 }
 
 func redirect(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "https://www.google.com", http.StatusFound)
+}
+
+// uniqueid generates unique id from unix time in microsecond and randomnumber based on it,
+// then convert it to base 62 number
+func uniqueid() string {
+	now := time.Now().UnixNano() / 1000
+	delta := now - starttime
+	rand.Seed(delta)
+	n := rand.Intn(2 ^ timestampLeftShift)
+	id := delta<<timestampLeftShift | int64(n)
+
+	size := int64(len(chars))
+	result := make([]byte, 36)
+	i := 0
+	for id > 0 {
+		rem := id % size
+		id = id / size
+		result[i] = chars[rem]
+		i++
+	}
+	return string(result[:i])
 }
