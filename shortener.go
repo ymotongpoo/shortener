@@ -18,15 +18,41 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 )
 
 const Version = "0.1.0"
 
+var (
+	seed    = int64(25) // seed for randomness
+	samples = []byte{}
+)
+
+func initSample() {
+	original := make([]byte, 64) // [0-9A-Za-z_\-] contains 64 chars.
+	for i := 0; i < 10; i++ {    // 0-9
+		original[i] = byte(48 + i)
+	}
+	for i := 0; i < 26; i++ { // A-Z
+		original[10+i] = byte(65 + i)
+	}
+	for i := 0; i < 26; i++ { // a-z
+		original[36+i] = byte(97 + i)
+	}
+	original[62] = '_'
+	original[63] = '-'
+	rand.Seed(seed)
+	for i, n := range rand.Perm(len(original)) {
+		samples[i] = original[n]
+	}
+}
+
 func init() {
+	initSample()
 	router := &RegexpHandler{}
 	router.HandleFunc(`/`, top)
-	router.HandleFunc(`/[0-9A-Za-z]{6}`, redirect)
+	router.HandleFunc(`/[0-9A-Za-z_\-]{6}`, redirect)
 	router.HandleFunc(`/version`, version)
 	router.HandleFunc(`/shortener/v1`, shortner)
 	http.Handle("/", router)

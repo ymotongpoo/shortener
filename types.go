@@ -17,19 +17,20 @@ package shortener
 import (
 	"net/http"
 	"regexp"
-
-	"appengine"
 )
 
+// URLRequest is a struct to request URL shortening to the server.
 type URLRequest struct {
 	URL string `json:"url"`
 }
 
+// route holds URL path regexp pattern and corresponding handler.
 type route struct {
 	pattern *regexp.Regexp
 	handler http.Handler
 }
 
+// RegexpHandler holds a set of routing pattern.
 type RegexpHandler struct {
 	routes []*route
 }
@@ -45,10 +46,7 @@ func (rh *RegexpHandler) HandleFunc(pattern string, handler func(http.ResponseWr
 }
 
 func (rh *RegexpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	c := appengine.NewContext(r)
-	c.Infof("[ServeHTTP] %v, N routers: %v", r.URL.Path, len(rh.routes))
 	for _, route := range rh.routes {
-		c.Infof("[ServeHTTP] matched %v", route.pattern)
 		if route.pattern.MatchString(r.URL.Path) {
 			route.handler.ServeHTTP(w, r)
 			return
