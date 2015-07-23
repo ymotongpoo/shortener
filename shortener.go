@@ -79,18 +79,22 @@ func shortener(w http.ResponseWriter, r *http.Request) {
 	req := URLRequest{}
 	if r.Method != "POST" {
 		http.Error(w, fmt.Sprintf("Methods but for POST are not allowed"), http.StatusMethodNotAllowed)
+		return
 	}
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Unexpected payload: %v", err), http.StatusInternalServerError)
+		return
 	}
 	err = json.Unmarshal(data, &req)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("JSON decode error: %v", err), http.StatusInternalServerError)
+		return
 	}
 
 	if !URLpattern.MatchString(req.URL) {
 		http.Error(w, fmt.Sprintf("parameter must be valid web URI"), http.StatusBadRequest)
+		return
 	}
 
 	c := appengine.NewContext(r)
@@ -103,10 +107,12 @@ func shortener(w http.ResponseWriter, r *http.Request) {
 	_, err = datastore.Put(c, key, e)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("datastore put error: %v", err), http.StatusInternalServerError)
+		return
 	}
 	entry, err := json.Marshal(e)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("JSON encode error: %v", err), http.StatusInternalServerError)
+		return
 	}
 	fmt.Fprintf(w, string(entry))
 }
