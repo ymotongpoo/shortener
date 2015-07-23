@@ -120,7 +120,7 @@ func shortener(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("JSON encode error: %v", err), http.StatusInternalServerError)
 		return
 	}
-	fmt.Fprintf(w, string(entry))
+	fmt.Fprintf(w, "%v", string(entry))
 }
 
 // redirect find specified shortened URL path from datastore and redirect to original URL.
