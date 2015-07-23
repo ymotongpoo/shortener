@@ -20,8 +20,8 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"path"
-	"regexp"
 	"time"
 
 	"appengine"
@@ -35,8 +35,6 @@ const (
 )
 
 var chars []byte // used for unique id generation.
-
-var URLpattern = regexp.MustCompile(`(https?|ftp)://([\w-]+\.)+[\w-]+(/[\w- ./?%&=]*)?`)
 
 // initChars initialize chars as sequence of 0-9A-Za-z
 func initChars() {
@@ -92,8 +90,16 @@ func shortener(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !URLpattern.MatchString(req.URL) {
-		http.Error(w, fmt.Sprintf("parameter must be valid web URI"), http.StatusBadRequest)
+	url, err := url.Parse(req.URL)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Invalid URL: %v", req.URL), http.StatusInternalServerError)
+		return
+	}
+	switch url.Scheme {
+	case "https", "http", "ftp":
+		break
+	default:
+		http.Error(w, fmt.Sprintf("Scheme is not supported: %v", req.URL), http.StatusInternalServerError)
 		return
 	}
 
@@ -124,7 +130,8 @@ func redirect(w http.ResponseWriter, r *http.Request) {
 	es := []URLEntity{}
 	keys, err := datastore.NewQuery("URL").Filter("ID=", id).GetAll(c, &es)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("datastore error: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("datastore get error: %v", err), http.StatusInternalServerError)
+		return
 	}
 	if len(es) == 0 {
 		http.Redirect(w, r, "/", http.StatusNotFound)
@@ -132,9 +139,10 @@ func redirect(w http.ResponseWriter, r *http.Request) {
 	}
 	original := es[0].URL
 	es[0].Count += 1
-	_, err = datastore.Put(c, keys[0], es[0])
+	_, err = datastore.Put(c, keys[0], &es[0])
 	if err != nil {
-		http.Error(w, fmt.Sprintf("datastore error: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("datastore put error: %v", err), http.StatusInternalServerError)
+		return
 	}
 	http.Redirect(w, r, original, http.StatusFound)
 }
