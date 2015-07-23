@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"path"
 	"time"
 
 	"appengine"
@@ -66,6 +67,7 @@ func version(w http.ResponseWriter, r *http.Request) {
 
 // top returns UI front page.
 func top(w http.ResponseWriter, r *http.Request) {
+
 	fmt.Fprintf(w, "hello")
 }
 
@@ -102,8 +104,26 @@ func shortener(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(entry))
 }
 
+// redirect find specified shortened URL path from datastore and redirect to original URL.
 func redirect(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "https://www.google.com", http.StatusFound)
+	c := appengine.NewContext(r)
+	id := path.Base(r.URL.Path)
+	es := []URLEntity{}
+	keys, err := datastore.NewQuery("URL").Filter("ID=", id).GetAll(c, &es)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("datastore error: %v", err), http.StatusInternalServerError)
+	}
+	if len(es) == 0 {
+		http.Redirect(w, r, "/", http.StatusNotFound)
+		return
+	}
+	original := es[0].URL
+	es[0].Count += 1
+	key, err := datastore.Put(c, key[0], es[0])
+	if err != nil {
+		http.Error(w, fmt.Sprintf("datastore error: %v", err), http.StatusInternalServerError)
+	}
+	http.Redirect(w, r, original, http.StatusFound)
 }
 
 // uniqueid generates unique id from unix time in microsecond and randomnumber based on it,
