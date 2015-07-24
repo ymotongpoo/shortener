@@ -89,7 +89,6 @@ func shortener(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("JSON decode error: %v", err), http.StatusInternalServerError)
 		return
 	}
-
 	url, err := url.Parse(req.URL)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Invalid URL: %v", req.URL), http.StatusInternalServerError)
