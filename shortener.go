@@ -17,11 +17,14 @@ package shortener
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
+	"regexp"
 	"time"
 
 	"appengine"
@@ -34,7 +37,10 @@ const (
 	timestampLeftShift = 22
 )
 
-var chars []byte // used for unique id generation.
+var (
+	chars      []byte // used for unique id generation.
+	staticPath = regexp.MustCompile(`(bower_components|elements)/.*`)
+)
 
 // initChars initialize chars as sequence of 0-9A-Za-z
 func initChars() {
@@ -54,10 +60,10 @@ func initChars() {
 func init() {
 	initChars()
 	router := &RegexpHandler{}
-	router.HandleFunc(`/\w+\.(html|js|css|svg)`, top)
-	router.HandleFunc(`/[0-9A-Za-z_\-]{10}`, redirect)
+	router.HandleFunc(`/[0-9A-Za-z_\-]{10,}`, redirect)
 	router.HandleFunc(`/version`, version)
 	router.HandleFunc(`/shortener/v1`, shortener)
+	router.HandleFunc(`/.*`, top)
 	http.Handle("/", router)
 }
 
@@ -67,7 +73,29 @@ func version(w http.ResponseWriter, r *http.Request) {
 }
 
 // top returns UI front page.
-var top = http.FileServer("static/")
+func top(w http.ResponseWriter, r *http.Request) {
+	p := r.URL.Path
+	if staticPath.MatchString(p) {
+		local := path.Join("./static", p)
+		appengine.NewContext(r).Infof("path: %v", local)
+		http.ServeFile(w, r, local)
+		return
+	}
+	switch p {
+	case "/":
+		f, err := os.Open("./static/index.html")
+		if err != nil {
+			http.Error(w, "error opening index.html", http.StatusInternalServerError)
+			break
+		}
+		defer f.Close()
+		_, err = io.Copy(w, f)
+		if err != nil {
+			http.Error(w, "error opening index.html", http.StatusInternalServerError)
+			break
+		}
+	}
+}
 
 // shortener
 func shortener(w http.ResponseWriter, r *http.Request) {
@@ -123,6 +151,7 @@ func shortener(w http.ResponseWriter, r *http.Request) {
 func redirect(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
 	id := path.Base(r.URL.Path)
+	c.Infof("[redirect] %v", id)
 	es := []URLEntity{}
 	keys, err := datastore.NewQuery("URL").Filter("ID=", id).GetAll(c, &es)
 	if err != nil {

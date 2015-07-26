@@ -1,0 +1,58 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<dom-module id="url-form">
+  <style>
+   :host {
+     --paper-input-container {
+       display: inline-block;
+     }
+   }
+
+   paper-button {
+     background: #7B1FA2;
+   }
+  </style>
+  <template>
+    <iron-ajax id="ajax"
+               url="/shortener/v1"
+               method="POST"
+               handle-as="json"
+               on-response="_handleResponse"></iron-ajax>
+    <div class="form">
+      <paper-input label="URL" placeholder="http://garsue.fm/" value="{{url}}"></paper-input>
+      <paper-button on-tap="_onTapped">Shorten</paper-button>
+    </div>
+    <div class="result">[[shortened]]</div>
+  </template>
+  <script>
+   Polymer({
+     is: 'url-form',
+     properties: {
+       url: {
+         type: String,
+         value: ""
+       },
+       result: {
+         type: Object,
+       },
+       shortened: {
+         type: String,
+         value: ""
+       }
+     },
+     _onTapped: function(event) {
+       this.$.ajax.body = JSON.stringify({
+         "url": this.url,
+       });
+       this.$.ajax.generateRequest();
+     },
+     _handleResponse: function(event) {
+       var resp = event.detail.response;
+       this.result = resp;
+       this.shortened = window.location.hostname + "/" + this.result.id;
+     }
+   });
+  </script>
+</dom-module>
