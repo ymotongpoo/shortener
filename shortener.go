@@ -54,8 +54,8 @@ func initChars() {
 func init() {
 	initChars()
 	router := &RegexpHandler{}
-	router.HandleFunc(`/`, top)
-	router.HandleFunc(`/[0-9A-Za-z_\-]{10,}`, redirect)
+	router.HandleFunc(`/\w+\.(html|js|css|svg)`, top)
+	router.HandleFunc(`/[0-9A-Za-z_\-]{10}`, redirect)
 	router.HandleFunc(`/version`, version)
 	router.HandleFunc(`/shortener/v1`, shortener)
 	http.Handle("/", router)
@@ -67,10 +67,7 @@ func version(w http.ResponseWriter, r *http.Request) {
 }
 
 // top returns UI front page.
-func top(w http.ResponseWriter, r *http.Request) {
-
-	fmt.Fprintf(w, "hello")
-}
+var top = http.FileServer("static/")
 
 // shortener
 func shortener(w http.ResponseWriter, r *http.Request) {

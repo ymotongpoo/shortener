@@ -1,0 +1,10 @@
+{
+  "name": "shortener",
+  "version": "0.1.0",
+  "homepage": "https://github.com/ymotongpoo/shortener",
+  "description": "web front for shortener",
+  "license": "APL2",
+  "dependencies": {
+    "polymer": "~1.0.8"
+  }
+}
