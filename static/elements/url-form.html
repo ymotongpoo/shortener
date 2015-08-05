@@ -22,7 +22,7 @@
      color: white;
    }
 
-   .result {
+   #result {
      margin-top: 16px;
      margin-left: 0px;
      font-family: 'Roboto', sans-serif;
@@ -37,10 +37,10 @@
                handle-as="json"
                on-response="_handleResponse"></iron-ajax>
     <div class="form">
-      <paper-input label="URL" placeholder="http://garsue.fm/" value="{{url}}"></paper-input>
+      <paper-input id="url" label="URL" placeholder="http://garsue.fm/" value="{{url}}"></paper-input>
       <paper-button on-tap="_onTapped">Shorten</paper-button>
     </div>
-    <div class="result">[[shortened]]</div>
+    <div id="result">[[shortened]]</div>
   </template>
   <script>
    Polymer({
@@ -68,6 +68,12 @@
        var resp = event.detail.response;
        this.result = resp;
        this.shortened = window.location.hostname + "/" + this.result.id;
+       var range = document.createRange();
+       range.selectNodeContents(this.$.result);
+       window.getSelection().addRange(range);
+     },
+     focus: function(event) {
+       this.$.url.focus();
      }
    });
   </script>

@@ -29,6 +29,7 @@ import (
 
 	"appengine"
 	"appengine/datastore"
+	"appengine/urlfetch"
 )
 
 const (
@@ -114,20 +115,24 @@ func shortener(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("JSON decode error: %v", err), http.StatusInternalServerError)
 		return
 	}
-	url, err := url.Parse(req.URL)
+	u, err := url.Parse(req.URL)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Invalid URL: %v", req.URL), http.StatusInternalServerError)
 		return
 	}
-	switch url.Scheme {
+	c := appengine.NewContext(r)
+	ok := urlExist(&c, req.URL)
+	if !ok {
+		http.Error(w, fmt.Sprintf("Page is not found: %v", req.URL), http.StatusBadRequest)
+		return
+	}
+	switch u.Scheme {
 	case "https", "http", "ftp":
 		break
 	default:
 		http.Error(w, fmt.Sprintf("Scheme is not supported: %v", req.URL), http.StatusInternalServerError)
 		return
 	}
-
-	c := appengine.NewContext(r)
 	id := uniqueid()
 	e := &URLEntity{
 		ID:  id,
@@ -145,6 +150,19 @@ func shortener(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprintf(w, "%v", string(entry))
+}
+
+func urlExist(c *appengine.Context, urlStr string) bool {
+	client := urlfetch.Client(*c)
+	resp, err := client.Get(urlStr)
+	if err != nil {
+		return false
+	}
+	switch resp.StatusCode {
+	case http.StatusNotFound:
+		return false
+	}
+	return true
 }
 
 // redirect find specified shortened URL path from datastore and redirect to original URL.
