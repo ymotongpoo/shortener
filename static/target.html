@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+  <head>
+    <title>URL shortner</title>
+    <script src="bower_components/webcomponentsjs/webcomponents.min.js"></script>
+    <link rel="import" href="elements/url-form.html">
+    <link href='http://fonts.googleapis.com/css?family=Roboto' rel='stylesheet' type='text/css'>
+  </head>
+  <style>
+   h1 {
+     font-family: 'Roboto', sans-serif;
+     font-size: 60px;
+     color: #212121;
+   }
+   #content {
+     position: absolute;
+     top: 0;
+     left: 0;
+     right: 0;
+     bottom: 0;
+     margin: 0 auto;
+     width: 900px;
+     height: 200px;
+   }
+   #main {
+     margin
+   }
+  </style>
+  <body unresolved>
+    <div id="content">
+      <h1></h1>
+      <url-form id="main"></url-form>
+    </div>
+  </body>
+  <script>
+   var hostname = window.location.hostname;
+   var h1 = document.getElementsByTagName('h1')[0];
+   h1.innerHTML = hostname;
+   var urlform = document.getElementById('main');
+   urlform.focus();
+  </script>
+</html>

@@ -1,8 +1,13 @@
 application: chimpoco-server
-version: 1
+version: 2
 runtime: go
 api_version: go1
 
 handlers:
 - url: /.*
   script: _go_app
+
+skip_files:
+- ^static/elements#.*#$
+- ^static/bower_components#.*#$
+- ^static/target.html#$
