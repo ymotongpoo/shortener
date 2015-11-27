@@ -3,6 +3,8 @@
   <head>
     <title>URL shortner</title>
     <script src="bower_components/webcomponentsjs/webcomponents.min.js"></script>
+    <script src="https://apis.google.com/js/platform.js"></script>
+    <meta name="google-signin-client_id" content="1079313200446-4gaatsnt3tglhvf2vqenj64j9qq13kla.apps.googleusercontent.com">
     <link rel="import" href="elements/url-form.html">
     <link href='http://fonts.googleapis.com/css?family=Roboto' rel='stylesheet' type='text/css'>
   </head>
@@ -22,13 +24,12 @@
      width: 900px;
      height: 200px;
    }
-   #main {
-     margin
-   }
+   
   </style>
   <body unresolved>
     <div id="content">
       <h1></h1>
+      <div id="signin"></div>
       <url-form id="main"></url-form>
     </div>
   </body>
@@ -38,5 +39,41 @@
    h1.innerHTML = hostname;
    var urlform = document.getElementById('main');
    urlform.focus();
+
+   // for Google sign-in
+   gapi.load('auth2', function() {
+     gapi.auth2.init();
+     var auth2 = gapi.auth2.getAuthInstance();
+     var signin = document.querySelector('#signin');
+     var signinListener = function() {
+       auth2.signIn().then(function(){
+         var profile = gapi.auth2.BasicProfile();
+         console.log('ID: ' + profile.getId());
+         console.log('Name: ' + profile.getName());
+         console.log('Image URL: ' + profile.getImageUrl());
+         console.log('Email: ' + profile.getEmail());
+       });
+     };
+     var signoutListener = function() {
+       auth2.disconnect();
+       auth2.signOut().then(function(){
+         console.log('logged out');
+       });
+     };
+     auth2.isSignedIn.listen(function(isSignedIn) {
+       if (isSignedIn) {
+         signin.removeEventListener('click',signinListener);
+         signin.addEventListener('click', signoutListener);
+       } else {
+         signin.removeEventListener('click', signoutListener);
+         signin.addEventListener('click', signinListener);
+       }
+     });
+   });
+   gapi.signin2.render('signin', {
+     'theme': 'dark'
+   });
+
+
   </script>
 </html>
