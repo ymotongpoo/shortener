@@ -13825,35 +13825,24 @@ Custom property | Description | Default
    urlform.focus();
 
    // for Google sign-in
+   var auth2;
    gapi.load('auth2', function() {
-     gapi.auth2.init();
-     var auth2 = gapi.auth2.getAuthInstance();
-     var signin = document.querySelector('#signin');
-     var signinListener = function() {
-       auth2.signIn().then(function(){
-         var profile = gapi.auth2.BasicProfile();
-         console.log('ID: ' + profile.getId());
-         console.log('Name: ' + profile.getName());
-         console.log('Image URL: ' + profile.getImageUrl());
-         console.log('Email: ' + profile.getEmail());
-       });
-     };
-     var signoutListener = function() {
-       auth2.disconnect();
-       auth2.signOut().then(function(){
-         console.log('logged out');
-       });
-     };
-     auth2.isSignedIn.listen(function(isSignedIn) {
-       if (isSignedIn) {
-         signin.removeEventListener('click',signinListener);
-         signin.addEventListener('click', signoutListener);
-       } else {
-         signin.removeEventListener('click', signoutListener);
-         signin.addEventListener('click', signinListener);
-       }
-     });
+     auth2 = gapi.auth2.init();
+     auth2.attachClickHandler('signin', {}, onSuccess, onFailure);
    });
+
+   var onSuccess = function(user) {
+     var profile = user.getBasicProfile();
+     console.log('ID: ' + profile.getId());
+     console.log('Name: ' + profile.getName());
+     console.log('Image URL: ' + profile.getImageUrl());
+     console.log('Email: ' + profile.getEmail());
+   };
+
+   var onFailure = function(error) {
+     console.log(error)
+   };
+
    gapi.signin2.render('signin', {
      'theme': 'dark'
    });
